@@ -32,26 +32,40 @@ REST API для дошки оголошень з JWT-автентифікаці�
 npm install
 ```
 
-2. Створіть файл конфігурації:
+2. Запустіть PostgreSQL (наприклад, у Docker):
+
+```bash
+docker run -d --name announcements-db \
+  -e POSTGRES_PASSWORD=password \
+  -e POSTGRES_DB=announcements \
+  -p 5432:5432 \
+  postgres:17
+```
+
+Якщо порт 5432 вже зайнятий, використайте `-p 5433:5432` і порт `5433` у `DATABASE_URL`.
+Після перезавантаження комп'ютера контейнер запускається командою `docker start announcements-db`.
+
+3. Створіть файл конфігурації:
 
 ```bash
 cp .env.example .env
 ```
 
-3. Налаштуйте `.env`:
+4. Налаштуйте `.env` (значення нижче відповідають контейнеру з кроку 2):
 
 ```env
 DATABASE_URL=postgresql://postgres:password@localhost:5432/announcements?schema=public
 JWT_SECRET=your-secret-key-at-least-256-bits-long
 ```
 
-4. Застосуйте міграцію:
+5. Застосуйте міграцію та згенеруйте Prisma Client:
 
 ```bash
 npm run prisma:migrate
+npm run prisma:generate
 ```
 
-5. Запустіть проект:
+6. Запустіть проект:
 
 ```bash
 npm run dev
@@ -66,7 +80,7 @@ npm run dev
 | POST  | `/auth/register` | Реєстрація користувача        | Ні   |
 | POST  | `/auth/login`    | Вхід користувача              | Ні   |
 | POST  | `/auth/refresh`  | Оновлення токенів             | Ні   |
-| POST  | `/auth/logout`   | Вихід                         | Ні   |
+| POST  | `/auth/logout`   | Вихід                         | Так  |
 | GET   | `/auth/me`       | Профіль поточного користувача | Так  |
 
 ### Оголошення
