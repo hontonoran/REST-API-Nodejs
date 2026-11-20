@@ -24,7 +24,9 @@ export function authenticate(req: Request, _res: Response, next: NextFunction) {
   }
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET!) as unknown as AuthPayload;
+    const payload = jwt.verify(token, process.env.JWT_SECRET!, {
+      algorithms: ["HS256"],
+    }) as unknown as AuthPayload;
     if (payload.type === "refresh") throw new Error("Wrong token type");
     req.user = payload;
     next();

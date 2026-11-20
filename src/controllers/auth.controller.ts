@@ -56,7 +56,9 @@ export async function refresh(req: Request, res: Response) {
 
   let payload: { type?: string };
   try {
-    payload = jwt.verify(refreshToken, process.env.JWT_SECRET!) as { type?: string };
+    payload = jwt.verify(refreshToken, process.env.JWT_SECRET!, {
+      algorithms: ["HS256"],
+    }) as { type?: string };
   } catch {
     throw createError(401, "Invalid refresh token");
   }
@@ -68,7 +70,6 @@ export async function refresh(req: Request, res: Response) {
   });
   if (!stored) throw createError(401, "Invalid refresh token");
 
-  // Token rotation: the old token can never be used again
   await prisma.refreshToken.delete({ where: { id: stored.id } });
 
   res.json(await issueTokens(stored.user));
