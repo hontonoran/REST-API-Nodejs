@@ -7,6 +7,8 @@ import * as auth from "../controllers/auth.controller.ts";
 import {
   authResponseSchema,
   errorSchema,
+  exampleTokens,
+  exampleUser,
   loginSchema,
   meResponseSchema,
   refreshSchema,
@@ -24,19 +26,29 @@ router.get("/me", authenticate, auth.me);
 
 export default router;
 
-const json = (schema: ZodType) => ({
-  content: { "application/json": { schema } },
+const json = (schema: ZodType, example?: unknown) => ({
+  content: { "application/json": { schema, example } },
 });
-const error = (description: string) => ({ description, ...json(errorSchema) });
+const error = (description: string) => ({
+  description,
+  ...json(errorSchema, { error: description }),
+});
 
 registry.registerPath({
   method: "post",
   path: "/auth/register",
   tags: ["Auth"],
   summary: "Register a new user",
-  request: { body: json(registerSchema) },
+  request: {
+    body: json(registerSchema, {
+      username: "ivan_petrenko",
+      email: "ivan@example.com",
+      password: "password",
+      name: "Іван",
+    }),
+  },
   responses: {
-    201: { description: "User created", ...json(authResponseSchema) },
+    201: { description: "User created", ...json(authResponseSchema, { user: exampleUser, ...exampleTokens }) },
     400: { description: "Validation failed" },
     409: error("Username or email already taken"),
   },
@@ -47,9 +59,9 @@ registry.registerPath({
   path: "/auth/login",
   tags: ["Auth"],
   summary: "Log in",
-  request: { body: json(loginSchema) },
+  request: { body: json(loginSchema, { username: "ivan_petrenko", password: "password" }) },
   responses: {
-    200: { description: "Logged in", ...json(authResponseSchema) },
+    200: { description: "Logged in", ...json(authResponseSchema, { user: exampleUser, ...exampleTokens }) },
     400: { description: "Validation failed" },
     401: error("Invalid credentials"),
   },
@@ -60,9 +72,9 @@ registry.registerPath({
   path: "/auth/refresh",
   tags: ["Auth"],
   summary: "Get a new token pair (token rotation)",
-  request: { body: json(refreshSchema) },
+  request: { body: json(refreshSchema, { refreshToken: "eyJhbGci..." }) },
   responses: {
-    200: { description: "New token pair", ...json(tokensSchema) },
+    200: { description: "New token pair", ...json(tokensSchema, exampleTokens) },
     400: { description: "Validation failed" },
     401: error("Invalid refresh token"),
   },
@@ -87,7 +99,10 @@ registry.registerPath({
   summary: "Current user profile",
   security: [{ bearerAuth: [] }],
   responses: {
-    200: { description: "Current user", ...json(meResponseSchema) },
+    200: {
+      description: "Current user",
+      ...json(meResponseSchema, { ...exampleUser, createdAt: "2025-01-10T12:00:00.000Z" }),
+    },
     401: error("Unauthorized"),
   },
 });

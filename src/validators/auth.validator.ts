@@ -34,3 +34,11 @@ export const authResponseSchema = tokensSchema.extend({ user: publicUserSchema }
 export const meResponseSchema = publicUserSchema.extend({ createdAt: z.string() });
 
 export const errorSchema = z.object({ error: z.string() });
+
+export const exampleUser = {
+  id: 1,
+  username: "ivan_petrenko",
+  email: "ivan@example.com",
+  name: "Іван",
+};
+export const exampleTokens = { accessToken: "eyJhbGci...", refreshToken: "eyJhbGci..." };
