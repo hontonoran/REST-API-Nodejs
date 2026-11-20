@@ -5,3 +5,9 @@ node_modules
 /generated/prisma
 *.db
 *.db-journal
+
+# vscode settings
+.vscode
+
+# macos files
+.DS_Store
