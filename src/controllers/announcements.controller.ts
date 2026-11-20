@@ -56,3 +56,29 @@ export async function getById(req: Request, res: Response) {
   if (!announcement) throw createError(404, "Announcement not found");
   res.json(announcement);
 }
+
+export async function create(req: Request, res: Response) {
+  const announcement = await prisma.announcement.create({
+    data: { ...req.body, userId: req.user!.sub },
+    include,
+    omit,
+  });
+  res.status(201).json(announcement);
+}
+
+export async function update(req: Request, res: Response) {
+  const id = await findOwned(req);
+  const announcement = await prisma.announcement.update({
+    where: { id },
+    data: req.body,
+    include,
+    omit,
+  });
+  res.json(announcement);
+}
+
+export async function remove(req: Request, res: Response) {
+  const id = await findOwned(req);
+  await prisma.announcement.delete({ where: { id } });
+  res.status(204).end();
+}
