@@ -15,3 +15,22 @@ export const loginSchema = z.object({
 export const refreshSchema = z.object({
   refreshToken: z.string().min(1),
 });
+
+// Schemas for the OpenAPI docs
+export const publicUserSchema = z.object({
+  id: z.number().int(),
+  username: z.string(),
+  email: z.string(),
+  name: z.string(),
+});
+
+export const tokensSchema = z.object({
+  accessToken: z.string(),
+  refreshToken: z.string(),
+});
+
+export const authResponseSchema = tokensSchema.extend({ user: publicUserSchema });
+
+export const meResponseSchema = publicUserSchema.extend({ createdAt: z.string() });
+
+export const errorSchema = z.object({ error: z.string() });
