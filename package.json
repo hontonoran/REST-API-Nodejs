@@ -8,6 +8,7 @@
     "dev": "tsx --watch index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
+    "db:migrate:test": "tsx scripts/migrate-test.ts",
     "prisma:migrate": "prisma migrate dev",
     "prisma:generate": "prisma generate"
   },

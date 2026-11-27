@@ -11,7 +11,6 @@ export default defineConfig({
   test: {
     globals: true,
     env: { DATABASE_URL: testDatabaseUrl },
-    globalSetup: ["./tests/global-setup.ts"],
     setupFiles: ["./tests/setup.ts"],
     fileParallelism: false,
   },
