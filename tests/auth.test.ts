@@ -1,16 +1,8 @@
-import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import request from "supertest";
 import bcrypt from "bcrypt";
 import app from "../app.ts";
 import prisma from "../prisma/client.ts";
-
-beforeEach(async () => {
-  await prisma.user.deleteMany();
-});
-
-afterAll(async () => {
-  await prisma.$disconnect();
-});
 
 describe("Auth API", () => {
   describe("POST /auth/register", () => {

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import fs from "node:fs/promises";
 import request from "supertest";
 import jwt from "jsonwebtoken";
@@ -20,15 +20,10 @@ let token: string;
 
 beforeEach(async () => {
   vi.clearAllMocks();
-  await prisma.user.deleteMany();
   const user = await prisma.user.create({
     data: { username: "hontonoran", email: "hontonoran@example.com", password: "hash", name: "Anastasiia" },
   });
   token = jwt.sign({ sub: user.id, username: user.username }, process.env.JWT_SECRET!);
-});
-
-afterAll(async () => {
-  await prisma.$disconnect();
 });
 
 describe("POST /announcements (multipart/form-data)", () => {
