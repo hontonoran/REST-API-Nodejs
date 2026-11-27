@@ -15,7 +15,7 @@ export const upload = multer({
 
 function cleanupTempFile(req: Request, res: Response, next: NextFunction) {
   res.on("finish", () => {
-    if (req.file) fs.unlink(req.file.path).catch(() => {}); // already deleted after upload
+    if (req.file) fs.unlink(req.file.path).catch(() => {});
   });
   next();
 }
