@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import createError from "http-errors";
 import { randomUUID } from "node:crypto";
 import prisma from "../../prisma/client.ts";
+import logger from "../logger.ts";
 
 const publicUser = { id: true, username: true, email: true, name: true } as const;
 
@@ -34,6 +35,7 @@ export async function register(req: Request, res: Response) {
     select: publicUser,
   });
 
+  logger.info({ userId: user.id, username }, "User registered");
   res.status(201).json({ user, ...(await issueTokens(user)) });
 }
 
@@ -42,12 +44,14 @@ export async function login(req: Request, res: Response) {
 
   const user = await prisma.user.findUnique({ where: { username } });
   if (!user || !(await bcrypt.compare(password, user.password))) {
+    logger.warn({ username }, "Login failed: invalid credentials");
     throw createError(401, "Invalid credentials");
   }
 
   await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
   const { password: _password, createdAt: _createdAt, ...safeUser } = user;
 
+  logger.info({ userId: user.id, username }, "User logged in");
   res.json({ user: safeUser, ...(await issueTokens(user)) });
 }
 

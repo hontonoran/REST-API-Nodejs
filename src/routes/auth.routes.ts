@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { rateLimit } from "express-rate-limit";
 import type { ZodType } from "zod";
 import { registry } from "../openapi.ts";
 import { authenticate } from "../middleware/authenticate.ts";
@@ -17,6 +18,16 @@ import {
 } from "../validators/auth.validator.ts";
 
 const router = Router();
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { error: "Too many requests, please try again later" },
+});
+
+router.use(authLimiter);
 
 router.post("/register", validateBody(registerSchema), auth.register);
 router.post("/login", validateBody(loginSchema), auth.login);
@@ -51,6 +62,7 @@ registry.registerPath({
     201: { description: "User created", ...json(authResponseSchema, { user: exampleUser, ...exampleTokens }) },
     400: { description: "Validation failed" },
     409: error("Username or email already taken"),
+    429: error("Too many requests, please try again later"),
   },
 });
 
@@ -64,6 +76,7 @@ registry.registerPath({
     200: { description: "Logged in", ...json(authResponseSchema, { user: exampleUser, ...exampleTokens }) },
     400: { description: "Validation failed" },
     401: error("Invalid credentials"),
+    429: error("Too many requests, please try again later"),
   },
 });
 
@@ -77,6 +90,7 @@ registry.registerPath({
     200: { description: "New token pair", ...json(tokensSchema, exampleTokens) },
     400: { description: "Validation failed" },
     401: error("Invalid refresh token"),
+    429: error("Too many requests, please try again later"),
   },
 });
 

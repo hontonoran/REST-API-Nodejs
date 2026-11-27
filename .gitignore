@@ -11,3 +11,9 @@ node_modules
 
 # macos files
 .DS_Store
+
+# multer temp files
+uploads/*
+!uploads/.gitkeep
+
+coverage/
