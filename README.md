@@ -10,6 +10,13 @@ REST API для дошки оголошень з JWT-автентифікаці�
 
 Автентифікація — JWT з refresh токенами. Access token: 15 хвилин, refresh token: 7 днів. Token rotation для refresh токенів.
 
+Production-покращення:
+
+- **Безпека** — `helmet` (безпечні заголовки), `cors` (лише origins з `ALLOWED_ORIGINS`, інші отримують `403`), rate limiting на `/auth/*` — 10 запитів з IP за 15 хвилин, далі `429`.
+- **Логування** — `pino` + `pino-http`: кожен HTTP-запит, а також реєстрація, вхід, створення оголошення і завантаження фото. Заголовки `Authorization` і `Cookie` у логах приховані.
+- **Фото оголошення** — `multer` тимчасово зберігає файл в `uploads/`, файл завантажується в Cloudinary, локальна копія видаляється. У базі зберігається лише `imageUrl` (опціональне поле).
+- **Тести** — Vitest + Supertest на окремій тестовій базі.
+
 ## Технологічний стек
 
 | Технологія                     | Опис                            |
@@ -23,6 +30,11 @@ REST API для дошки оголошень з JWT-автентифікаці�
 | @asteasolutions/zod-to-openapi | Генерація OpenAPI документації  |
 | swagger-ui-express             | Swagger UI                      |
 | dotenv                         | Змінні середовища               |
+| helmet, cors                   | Заголовки безпеки, CORS         |
+| express-rate-limit             | Rate limiting auth-маршрутів    |
+| pino, pino-http, pino-pretty   | Логування                       |
+| multer, cloudinary             | Завантаження фото               |
+| Vitest, Supertest              | Тестування                      |
 
 ## Встановлення
 
@@ -55,8 +67,15 @@ cp .env.example .env
 
 ```env
 DATABASE_URL=postgresql://postgres:password@localhost:5432/announcements?schema=public
+TEST_DATABASE_URL=postgresql://postgres:password@localhost:5432/announcements_test?schema=public
 JWT_SECRET=your-secret-key-at-least-256-bits-long
+ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 ```
+
+Тестова база (`TEST_DATABASE_URL`) створюється і мігрується автоматично при `npm test`. Тести очищають її перед кожним тестом, тому вона має бути окремою від основної.
 
 5. Застосуйте міграцію та згенеруйте Prisma Client:
 
@@ -89,8 +108,8 @@ npm run dev
 | ------ | -------------------- | ----------------------------------------- | ---- |
 | GET    | `/announcements`     | Список з пагінацією, пошуком, сортуванням | Ні   |
 | GET    | `/announcements/:id` | Деталі оголошення                         | Ні   |
-| POST   | `/announcements`     | Створення оголошення                      | Так  |
-| PATCH  | `/announcements/:id` | Часткове оновлення (власне)               | Так  |
+| POST   | `/announcements`     | Створення оголошення (+ фото)             | Так  |
+| PATCH  | `/announcements/:id` | Часткове оновлення (власне, + фото)       | Так  |
 | DELETE | `/announcements/:id` | Видалення (власне)                        | Так  |
 
 ## Параметри запитів
@@ -121,7 +140,19 @@ npm run dev
 | `price`       | число, обов'язкове, > 0                                |
 | `category`    | рядок, обов'язковий: `sale`, `service`, `job`, `other` |
 
-PATCH використовує ті ж правила валідації, але всі поля опціональні (хоча б одне має бути присутнє).
+| `image`       | файл-зображення, опціональний, до 5 МБ                 |
+
+POST і PATCH приймають `multipart/form-data` (поле файлу — `image`). JSON без фото теж працює.
+PATCH використовує ті ж правила валідації, але всі поля опціональні (хоча б одне поле або фото має бути присутнє).
+
+Приклад:
+
+```bash
+curl -X POST http://localhost:3000/announcements \
+  -H "Authorization: Bearer <accessToken>" \
+  -F title="Продам велосипед" -F description="Trek у відмінному стані, розмір рами L" \
+  -F price=8500 -F category=sale -F image=@bike.jpg
+```
 
 ## Структура проекту
 
@@ -137,6 +168,7 @@ boilerplate/
 │   │   └── announcements.controller.ts
 │   ├── middleware/
 │   │   ├── authenticate.ts
+│   │   ├── upload.ts          # multer + Cloudinary
 │   │   └── validate.ts
 │   ├── routes/
 │   │   ├── auth.routes.ts
@@ -144,8 +176,17 @@ boilerplate/
 │   ├── validators/
 │   │   ├── auth.validator.ts
 │   │   └── announcements.validator.ts
+│   ├── logger.ts              # pino
 │   └── openapi.ts
-├── app.ts
+├── tests/
+│   ├── auth.test.ts
+│   ├── announcements.test.ts
+│   ├── security.test.ts
+│   └── global-setup.ts
+├── uploads/                   # тимчасові файли multer
+├── app.ts                     # Express-застосунок (без listen)
+├── index.ts                   # запуск сервера
+├── vitest.config.ts
 ├── .env.example
 ├── .env
 ├── package.json
@@ -169,8 +210,10 @@ boilerplate/
 
 | Команда                   | Опис                                 |
 | ------------------------- | ------------------------------------ |
-| `npm run dev`             | Запуск з hot reload (`node --watch`) |
+| `npm run dev`             | Запуск з hot reload (`tsx --watch`)  |
 | `npm start`               | Запуск у виробничому режимі          |
+| `npm test`                | Запуск тестів (Vitest)               |
+| `npm run test:watch`      | Тести в режимі спостереження         |
 | `npm run prisma:migrate`  | Створення та застосування міграцій   |
 | `npm run prisma:generate` | Генерація Prisma Client              |
 
@@ -184,7 +227,7 @@ Swagger UI доступний за адресою: http://localhost:3000/api-doc
 
 - `User` — `username` (унікальний), хешований `password`, `email` (унікальний), `name`, `createdAt`
 - `RefreshToken` — `token` (унікальний), зв'язок з `User`
-- `Announcement` — `title`, `description`, `price`, `category`, зв'язок з `User`, `createdAt`, `updatedAt`
+- `Announcement` — `title`, `description`, `price`, `category`, опціональний `imageUrl`, зв'язок з `User`, `createdAt`, `updatedAt`
 
 ## Ліцензія
 
