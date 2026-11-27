@@ -75,7 +75,13 @@ CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
 ```
 
-Тестова база (`TEST_DATABASE_URL`) створюється і мігрується автоматично при `npm test`. Тести очищають її перед кожним тестом, тому вона має бути окремою від основної.
+Тестова база (`TEST_DATABASE_URL`) має бути окремою від основної: тести очищають її перед кожним тестом. Застосуйте до неї міграції (база створиться автоматично, якщо її ще немає):
+
+```bash
+npm run db:migrate:test
+```
+
+Повторюйте цю команду після кожної нової міграції основної бази.
 
 5. Застосуйте міграцію та згенеруйте Prisma Client:
 
@@ -179,10 +185,15 @@ boilerplate/
 │   ├── logger.ts              # pino
 │   └── openapi.ts
 ├── tests/
+│   ├── helpers/
+│   │   └── db.ts              # cleanDatabase()
 │   ├── auth.test.ts
 │   ├── announcements.test.ts
 │   ├── security.test.ts
-│   └── global-setup.ts
+│   ├── sanity.test.ts         # тести працюють з тестовою базою
+│   └── setup.ts               # очищення бази перед кожним тестом
+├── scripts/
+│   └── migrate-test.ts        # міграції тестової бази
 ├── uploads/                   # тимчасові файли multer
 ├── app.ts                     # Express-застосунок (без listen)
 ├── index.ts                   # запуск сервера
@@ -214,6 +225,7 @@ boilerplate/
 | `npm start`               | Запуск у виробничому режимі          |
 | `npm test`                | Запуск тестів (Vitest)               |
 | `npm run test:watch`      | Тести в режимі спостереження         |
+| `npm run db:migrate:test` | Міграції для тестової бази           |
 | `npm run prisma:migrate`  | Створення та застосування міграцій   |
 | `npm run prisma:generate` | Генерація Prisma Client              |
 
