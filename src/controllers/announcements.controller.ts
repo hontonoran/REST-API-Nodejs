@@ -1,6 +1,8 @@
 import type { Request, Response } from "express";
 import createError from "http-errors";
 import prisma from "../../prisma/client.ts";
+import logger from "../logger.ts";
+import { uploadToCloudinary } from "../middleware/upload.ts";
 
 const PER_PAGE = 10;
 
@@ -57,20 +59,33 @@ export async function getById(req: Request, res: Response) {
   res.json(announcement);
 }
 
+async function uploadPhoto(req: Request) {
+  if (!req.file) return undefined;
+  const imageUrl = await uploadToCloudinary(req.file.path);
+  logger.info({ userId: req.user!.sub, imageUrl }, "Photo uploaded to Cloudinary");
+  return imageUrl;
+}
+
 export async function create(req: Request, res: Response) {
+  const imageUrl = await uploadPhoto(req);
   const announcement = await prisma.announcement.create({
-    data: { ...req.body, userId: req.user!.sub },
+    data: { ...req.body, imageUrl, userId: req.user!.sub },
     include,
     omit,
   });
+  logger.info({ announcementId: announcement.id, userId: req.user!.sub }, "Announcement created");
   res.status(201).json(announcement);
 }
 
 export async function update(req: Request, res: Response) {
+  if (!Object.keys(req.body ?? {}).length && !req.file) {
+    throw createError(400, "At least one field or a photo must be provided");
+  }
   const id = await findOwned(req);
+  const imageUrl = await uploadPhoto(req);
   const announcement = await prisma.announcement.update({
     where: { id },
-    data: req.body,
+    data: { ...req.body, imageUrl },
     include,
     omit,
   });

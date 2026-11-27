@@ -2,15 +2,18 @@ import { Router } from "express";
 import type { ZodType } from "zod";
 import { registry } from "../openapi.ts";
 import { authenticate } from "../middleware/authenticate.ts";
+import { uploadImage } from "../middleware/upload.ts";
 import { validateBody, validateParams, validateQuery } from "../middleware/validate.ts";
 import * as announcements from "../controllers/announcements.controller.ts";
 import {
   announcementListSchema,
   announcementSchema,
+  createAnnouncementFormSchema,
   createAnnouncementSchema,
   exampleAnnouncement,
   idParamsSchema,
   listQuerySchema,
+  updateAnnouncementFormSchema,
   updateAnnouncementSchema,
 } from "../validators/announcements.validator.ts";
 import { errorSchema } from "../validators/auth.validator.ts";
@@ -19,10 +22,17 @@ const router = Router();
 
 router.get("/", validateQuery(listQuerySchema), announcements.list);
 router.get("/:id", validateParams(idParamsSchema), announcements.getById);
-router.post("/", authenticate, validateBody(createAnnouncementSchema), announcements.create);
+router.post(
+  "/",
+  authenticate,
+  uploadImage,
+  validateBody(createAnnouncementSchema),
+  announcements.create,
+);
 router.patch(
   "/:id",
   authenticate,
+  uploadImage,
   validateParams(idParamsSchema),
   validateBody(updateAnnouncementSchema),
   announcements.update,
@@ -47,6 +57,9 @@ const laptop = {
   createdAt: "2025-01-10T12:00:00.000Z",
   updatedAt: "2025-01-10T12:00:00.000Z",
 };
+const form = (schema: ZodType) => ({
+  content: { "multipart/form-data": { schema } },
+});
 const secured = { security: [{ bearerAuth: [] }] };
 
 registry.registerPath({
@@ -83,16 +96,9 @@ registry.registerPath({
   method: "post",
   path: "/announcements",
   tags: ["Announcements"],
-  summary: "Create an announcement",
+  summary: "Create an announcement (optional photo, multipart/form-data)",
   ...secured,
-  request: {
-    body: json(createAnnouncementSchema, {
-      title: "Продам велосипед",
-      description: "Гірський велосипед, 21 швидкість",
-      price: 8000,
-      category: "sale",
-    }),
-  },
+  request: { body: form(createAnnouncementFormSchema) },
   responses: {
     201: { description: "Created", ...json(announcementSchema, exampleAnnouncement) },
     400: { description: "Validation failed" },
@@ -104,11 +110,11 @@ registry.registerPath({
   method: "patch",
   path: "/announcements/{id}",
   tags: ["Announcements"],
-  summary: "Update own announcement (partial)",
+  summary: "Update own announcement (partial, optional new photo, multipart/form-data)",
   ...secured,
   request: {
     params: idParamsSchema,
-    body: json(updateAnnouncementSchema, { title: "Продам велосипед терміново", price: 6500 }),
+    body: form(updateAnnouncementFormSchema),
   },
   responses: {
     200: {
